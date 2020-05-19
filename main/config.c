@@ -203,7 +203,7 @@ struct mea_config_s *config_init()
       return NULL;
    }
 
-   retrieve_item_str_value(&my_handle, "xpl_deviceid", &(mea_config.xpl_deviceid), generate_xpl_device_id_alloc, "io");
+   retrieve_item_str_value(&my_handle, "xpl_deviceid", &(mea_config.xpl_deviceid), generate_xpl_device_id_alloc, "os");
    retrieve_item_str_value(&my_handle, "xpl_instanceid", &(mea_config.xpl_instanceid), NULL, "edomus");
    snprintf(xpl_addr, sizeof(xpl_addr)-1, "%s-%s.%s", mea_config.xpl_vendorid, mea_config.xpl_deviceid, mea_config.xpl_instanceid);
    retrieve_item_str_value(&my_handle, "accessory_name", &(mea_config.accessory_name), generate_accessory_name_alloc, NULL);
