@@ -34,13 +34,11 @@ static struct mea_config_s *mea_config = NULL;
  */
 void update_contact_callback(int8_t v, int8_t prev, int8_t id, void *data);
 
-#define NB_CONTACTS 4
+#define NB_CONTACTS 2
 
 struct contact_s my_contacts[NB_CONTACTS] = {
    { .last_state=-1, .gpio_pin=16, .name="Contact 1", .callback=update_contact_callback, .status=1 },
-   { .last_state=-1, .gpio_pin=17, .name="Contact 2", .callback=update_contact_callback, .status=1 },
-   { .last_state=-1, .gpio_pin=18, .name="Contact 3", .callback=update_contact_callback, .status=1 },
-   { .last_state=-1, .gpio_pin=19, .name="Contact 4", .callback=update_contact_callback, .status=1 }
+   { .last_state=-1, .gpio_pin=17, .name="Contact 2", .callback=update_contact_callback, .status=1 }
 };
 
 
@@ -118,12 +116,10 @@ void update_temperature_callback(float t, float l, void *data)
  * relay data and callbacks
  */
 void update_relay_callback(int8_t v, int8_t prev, int8_t id, void *data);
-#define NB_RELAYS 4
+#define NB_RELAYS 2
 struct relay_s my_relays[NB_RELAYS] = {
    { .gpio_pin=4,  .name="Relay 1", .callback=update_relay_callback, .status=1 },
-   { .gpio_pin=21, .name="Relay 2", .callback=update_relay_callback, .status=1 },
-   { .gpio_pin=22, .name="Relay 3", .callback=update_relay_callback, .status=1 },
-   { .gpio_pin=25, .name="Relay 4", .callback=update_relay_callback, .status=1 }
+   { .gpio_pin=21, .name="Relay 2", .callback=update_relay_callback, .status=1 }
 };
 
 
@@ -140,18 +136,6 @@ void update_relay_callback(int8_t v, int8_t prev, int8_t id, void *data)
    }
 }
 
-/*
-int8_t update_relay(uint8_t r)
-{
-   if(r<NB_RELAYS) {
-      homekit_characteristic_t *_c = (homekit_characteristic_t *)(my_relays[r].relay);
-      _c->value.bool_value=relays_get(r);
-      homekit_characteristic_notify(_c, HOMEKIT_BOOL(_c->value.bool_value));
-      return 0;
-   }
-   return -1;
-}
-*/
 
 homekit_value_t relay_state_getter(homekit_characteristic_t *c)
 {
