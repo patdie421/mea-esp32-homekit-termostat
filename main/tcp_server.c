@@ -17,7 +17,6 @@
 #include "tcp_server.h"
 #include "config.h"
 #include "contacts.h"
-#include "flags.h"
 #include "relays.h"
 #include "temperature_dht.h"
 #include "temperature_ds18b20.h"
@@ -102,19 +101,12 @@ static void do_request(const int sock)
                } 
                break;
             };
-            case 'F':
             case 'I': {
                int id,r;
                n=sscanf(parameters, "%d%n",&id,&r); 
                if(n==1 && r==strlen(parameters)) {
                   ESP_LOGI(TAG,"input %d get",id);
-                  int8_t v;
-                  if(cmd=='I') {
-                     v=contacts_get(id);
-                  }
-                  else {
-                     v=flags_get(id);
-                  }
+                  int8_t v=contacts_get(id);
                   if(v<0) {
                      ESP_LOGI(TAG,"KO");
                      send_data(sock,"KO");

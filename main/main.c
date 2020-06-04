@@ -21,53 +21,12 @@
 #include "xpl_server.h"
 #include "relays.h"
 #include "contacts.h"
-#include "flags.h"
-#include "osmolation.h"
 
 #define LED_PIN 2
 
 static char *TAG = "main";
 
 static struct mea_config_s *mea_config = NULL;
-
-
-/*
- * 
- */
-void update_flag_callback(int8_t v, int8_t prev, int8_t id, void *data);
-#define NB_FLAGS 1
-
-struct flag_s my_flags[NB_FLAGS] = {
-   { .last_state=-1, .name="alarm flag", .callback=update_flag_callback }
-};
-
-
-void update_flag_callback(int8_t v, int8_t prev, int8_t id, void *data)
-{
-   homekit_characteristic_t *c=(homekit_characteristic_t *)data;
-   c->value.uint8_value = (uint8_t)v;
-
-   if(v!=prev) {
-      char device[3]="fX";
-      device[1]='0'+id;
-      xpl_send_current_hl("trig", device, v);
-      homekit_characteristic_notify(c, HOMEKIT_UINT8(v));
-   }
-}
-
-
-homekit_value_t flag_state_getter(homekit_characteristic_t *c) {
-   for(int8_t i=0;i<NB_FLAGS; i++) {
-      homekit_characteristic_t *_c = (homekit_characteristic_t *)(my_flags[i].flag);
-      if(_c->id == c->id) {
-         if(my_flags[i].last_state==-1) {
-            my_flags[i].last_state=0;
-         }
-         return HOMEKIT_UINT8(my_flags[i].last_state == 0 ? 0 : 1);
-      }
-   }
-   return HOMEKIT_UINT8(0);
-}
 
 
 /*
@@ -169,10 +128,6 @@ void update_relay_callback(int8_t v, int8_t prev, int8_t id, void *data)
 {
    homekit_characteristic_t *_c = (homekit_characteristic_t *)data;
    _c->value.bool_value=v;
-
-   if(id==1) {
-      osmolation_force(v);
-   }
 
    if(v!=prev) {
       char device[3]="oX";
@@ -286,11 +241,67 @@ homekit_server_config_t *init_accessory() {
       });
    }
 
-   for(int i=0;i<NB_FLAGS;i++) {
-      my_flags[i].flag=(void *)NEW_HOMEKIT_CHARACTERISTIC(CONTACT_SENSOR_STATE, 0, .getter_ex=flag_state_getter, .setter_ex=NULL, NULL);
+   *(s++) = NULL;
+
+//   accessories[0] = NEW_HOMEKIT_ACCESSORY(.category=homekit_accessory_category_lightbulb, .services=services);
+   accessories[0] = NEW_HOMEKIT_ACCESSORY(.category=homekit_accessory_category_outlet, .services=services);
+   accessories[1] = NULL;
+
+   return &config;
+}
+
+
+homekit_server_config_t *init_termostat() {
+   homekit_service_t* services[MAX_SERVICES + 1];
+   homekit_service_t** s = services;
+
+   struct mea_config_s *mea_config = config_get();
+
+   config.password = mea_config->accessory_password;
+
+   *(s++) = NEW_HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]) {
+      NEW_HOMEKIT_CHARACTERISTIC(NAME, mea_config->accessory_name),
+      NEW_HOMEKIT_CHARACTERISTIC(MANUFACTURER, "MEA"),
+      NEW_HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "0"),
+      NEW_HOMEKIT_CHARACTERISTIC(MODEL, "thermostat"),
+      NEW_HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "0.1"),
+      NEW_HOMEKIT_CHARACTERISTIC(IDENTIFY, identify_device),
+      NULL
+   });
+
+   *(s++) = NEW_HOMEKIT_SERVICE(TEMPERATURE_SENSOR, .primary=true, .characteristics=(homekit_characteristic_t*[]) {
+      NEW_HOMEKIT_CHARACTERISTIC(NAME, "ambient temperature"),
+      &temperature_dht,
+      NULL
+   });
+
+   *(s++) = NEW_HOMEKIT_SERVICE(HUMIDITY_SENSOR, .primary=true, .characteristics=(homekit_characteristic_t*[]) {
+      NEW_HOMEKIT_CHARACTERISTIC(NAME, "ambient humidity"),
+      &humidity_dht,
+      NULL
+   });
+
+   *(s++) = NEW_HOMEKIT_SERVICE(TEMPERATURE_SENSOR, .characteristics=(homekit_characteristic_t*[]) {
+      NEW_HOMEKIT_CHARACTERISTIC(NAME, "temperature probe"),
+      &temperature,
+      NULL
+   });
+
+   for(int i=0;i<NB_RELAYS;i++) {
+      my_relays[i].relay=(void *)NEW_HOMEKIT_CHARACTERISTIC(ON, false, .getter_ex=relay_state_getter, .setter_ex=relay_state_setter, NULL);
+//      *(s++) = NEW_HOMEKIT_SERVICE(LIGHTBULB, .characteristics=(homekit_characteristic_t*[]) {
+      *(s++) = NEW_HOMEKIT_SERVICE(OUTLET, .characteristics=(homekit_characteristic_t*[]) {
+         NEW_HOMEKIT_CHARACTERISTIC(NAME, my_relays[i].name),
+         my_relays[i].relay,
+         NULL
+      });
+   }
+
+   for(int i=0;i<NB_CONTACTS;i++) {
+      my_contacts[i].contact=(void *)NEW_HOMEKIT_CHARACTERISTIC(CONTACT_SENSOR_STATE, 0, .getter_ex=contact_state_getter, .setter_ex=NULL, NULL);
       *(s++) = NEW_HOMEKIT_SERVICE(CONTACT_SENSOR, .characteristics=(homekit_characteristic_t*[]) {
-         NEW_HOMEKIT_CHARACTERISTIC(NAME, my_flags[i].name),
-         my_flags[i].flag,
+         NEW_HOMEKIT_CHARACTERISTIC(NAME, my_contacts[i].name),
+         my_contacts[i].contact,
          NULL
       });
    }
@@ -308,7 +319,8 @@ homekit_server_config_t *init_accessory() {
 void sta_network_ready() {
    status_led_set_interval(1000);
 
-   homekit_server_config_t *_config = init_accessory();
+//   homekit_server_config_t *_config = init_accessory();
+   homekit_server_config_t *_config = init_termostat();
    if(_config) {
       homekit_server_init(_config);
    }
@@ -316,9 +328,6 @@ void sta_network_ready() {
    vTaskDelay(2000 / portTICK_PERIOD_MS);
 
    contacts_init(my_contacts, NB_CONTACTS);
-   flags_init(my_flags, NB_FLAGS);
-
-   osmolation_init(1, 0, 0, 1, 2);
 
    temperature_dht_init(update_temperature_dht_callback,(void *)&temperature_dht, update_humidity_dht_callback, (void *)&humidity_dht);
    temperature_dht_start();

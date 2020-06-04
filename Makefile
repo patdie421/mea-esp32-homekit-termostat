@@ -2,7 +2,7 @@
 # This is a project Makefile. It is assumed the directory this Makefile resides in is a
 # project subdirectory.
 #
-PROJECT_NAME := mea-osmolator
+PROJECT_NAME := mea-termostat
 EXTRA_COMPONENT_DIRS := /Users/patrice/esp/esp-idf-lib/components
 
 CFLAGS += -I$(abspath ../..) -DHOMEKIT_SHORT_APPLE_UUIDS
