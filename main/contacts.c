@@ -37,7 +37,7 @@ static void contacts_task(void* arg)
       for(int i=0;i<_nb_contacts;i++) {
          int v=0;
          for(int j=0;j<24;j++) {
-            vTaskDelay(1);
+            vTaskDelay(2);
             v=v+gpio_get_level(_contacts[i].gpio_pin);
          }
          v=(v > 12) ? 1 : 0;

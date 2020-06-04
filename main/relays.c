@@ -13,14 +13,17 @@
 
 #include "relays.h"
 
+// #define WITH_SAVING 1
 
 static char *TAG = "relays";
 
 int _nb_relays = 0;
 struct relay_s *_relays = NULL;
-static nvs_handle_t _relays_handle = 0;
-static int8_t _nvs_flag = 0;
 
+#ifdef WITH_SAVING
+static nvs_handle_t _relays_handle = 0;
+
+static int8_t _nvs_flag = 0;
 
 static void _relay_save_state(int8_t id)
 {
@@ -39,6 +42,7 @@ static int8_t _relay_load_state(int8_t id)
    }
    return v;
 }
+#endif
 
 
 int relays_get(int i)
@@ -56,7 +60,9 @@ void _relays_set(int i, bool v)
    if(_relays && i<_nb_relays) {
       gpio_set_level(_relays[i].gpio_pin, v ? RELAY_CLOSED : RELAY_OPENED);
       _relays[i].state=v ? 1 : 0;
+#ifdef WITH_SAVING
       _relay_save_state(i);
+#endif
    }
 }
 
@@ -68,7 +74,9 @@ void relays_set(int i, bool v)
 
       gpio_set_level(_relays[i].gpio_pin, v ? RELAY_CLOSED : RELAY_OPENED);
       _relays[i].state=v ? 1 : 0;
+#ifdef WITH_SAVING
       _relay_save_state(i);
+#endif
       _relays[i].callback(_relays[i].state, prev, i, _relays[i].relay);
    }
 }
@@ -78,6 +86,7 @@ void relays_init(struct relay_s relays[], int nb_relays) {
    _relays = relays;
    _nb_relays = nb_relays;
 
+#ifdef WITH_SAVING
    esp_err_t ret = nvs_open("relays", NVS_READWRITE, &_relays_handle);
    if (ret == ESP_OK) {
       _nvs_flag=1;
@@ -87,6 +96,7 @@ void relays_init(struct relay_s relays[], int nb_relays) {
       gpio_set_direction(relays[i].gpio_pin, GPIO_MODE_OUTPUT);
       _relays_set(i, _relay_load_state(i) ? 1 : 0);
    }
+#endif
 
    ESP_LOGI(TAG, "relays initialized");
 }

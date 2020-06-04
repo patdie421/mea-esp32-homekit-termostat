@@ -123,7 +123,7 @@ static int set_item_str_value(nvs_handle_t *my_handle, char *item, char **variab
 static int retrieve_item_str_value(nvs_handle_t *my_handle, char *item, char **variable, generate_value_t generate_value, void *userdata)
 {
    size_t required_size = 0;
-´
+
    if(*variable) {
       free(*variable);
       *variable=NULL;

@@ -16,6 +16,8 @@
 
 #include "relays.h"
 #include "contacts.h"
+#include "flags.h"
+
 #include "temperature_ds18b20.h"
 #include "temperature_dht.h"
 
@@ -232,6 +234,12 @@ void process_sensor_basic(char *p)
          break;
       case 'i':
          ivalue=contacts_get(id);
+         if(ivalue>=0) {
+            xpl_send_current_hl("stat", device, ivalue);
+         }
+         break;
+      case 'f':
+         ivalue=flags_get(id);
          if(ivalue>=0) {
             xpl_send_current_hl("stat", device, ivalue);
          }
